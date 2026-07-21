@@ -1,0 +1,158 @@
+program bench;
+
+{$MODE Delphi}
+
+{$APPTYPE CONSOLE}
+
+uses
+  SysUtils,
+  msgpack in '..\msgpack.pas',
+  superdate,
+  superobject,
+  supertypes;
+
+function GetTick: LongWord;
+begin
+  Result := LongWord(GetTickCount64);
+end;
+
+procedure BenchJson();
+var
+  js: ISuperObject;
+  xs: ISuperObject;
+  i, l: Integer;
+  k: cardinal;
+  s: SOString;
+  json : UTF8String;
+  ts: TSuperTableString;
+  a: ISuperArray;
+begin
+  Randomize;
+  js := TSuperObject.Create;
+  ts := js.AsObject;
+  k := GetTick;
+  for i := 1 to 100000 do
+  begin
+    l := i * 33;
+    s := 'param' + IntToStr(l);
+    ts.s[s] := s;
+    s := 'int' + IntToStr(l);
+    ts.i[s] := i;
+  end;
+  k := GetTick - k;
+  Writeln('insert map: ', k);
+
+  k := GetTick();
+
+  ts.O['array'] := TSuperObject.Create(stArray);
+  a := ts.O['array'].AsArray;
+  for i := 1 to 1000000 do
+  a.Add(TSuperObject.Create(SuperInt(i)));
+
+  k := GetTick - k;
+  Writeln('insert array: ', k);
+
+  k := GetTick;
+  json := UTF8Encode(js.AsJSon());
+  Writeln('dump: ', GetTick - k);
+  Writeln('size utf8: ', Length(json));
+
+  k := GetTick;
+  xs := TSuperObject.ParseString(PSOChar(UTF8Decode(json)), False);
+  Writeln('parse: ', GetTick - k);
+
+  k := GetTick;
+  ts := xs.AsObject;
+  for i := 1 to 100000 * 2 do
+  begin
+    l := i * 33;
+    s := 'param' + IntToStr(l);
+    ts.s[s];
+
+    l := i * 33;
+    s := 'param' + IntToStr(l);
+    ts.s[s];
+  end;
+  Writeln('acess map: ', GetTick - k);
+end;
+
+procedure BenchMsgPack();
+var
+  js: IMsgPackObject;
+  xs: IMsgPackObject;
+  i, l: Integer;
+  k: cardinal;
+  s: string;
+  ts: TMsgPackMap;
+  Data: RawByteString;
+  a: TMsgPackArray;
+begin
+  Randomize;
+  k := GetTick;
+  js := TMsgPackObject.Create(mptMap);
+  ts := js.AsMap;
+  for i := 1 to 100000 do
+  begin
+    l := i * 33;
+    s := 'param' + IntToStr(l);
+    ts.Put(s, TMsgPackObject.Create(s));
+    s := 'int' + IntToStr(l);
+    ts.Put(s, TMsgPackObject.Create(i));
+  end;
+  Writeln('insert map:', GetTick - k);
+
+  k := GetTick();
+  ts.Put('array', TMsgPackObject.Create(mptArray));
+  a := ts['array'].AsArray();
+  for i := 1 to 1000000 do
+    a.Add(TMsgPackObject.Create(i * 33));
+  Writeln('insert array:', GetTick - k);
+
+  k := GetTick;
+  Data := js.AsMsgPack();
+  Writeln('dump: ', GetTick - k);
+  Writeln('size: ', Length(Data));
+  
+  k := GetTick;
+  xs := TMsgPackObject.Parse(Data);
+  Writeln('parse: ', GetTick - k);
+
+  k := GetTick;
+  ts := xs.AsMap;
+  for i := 1 to 100000 * 2 do
+  begin
+    l := i * 33;
+    s := 'param' + IntToStr(l);
+    ts.Get(s);
+
+    l := i * 33;
+    s := 'param' + IntToStr(l);
+    ts.Get(s);
+  end;
+  Writeln('access map: ', GetTick - k);
+end;
+
+var
+  k : Cardinal;
+begin
+  try
+    Writeln('--- Json ---');
+    k := GetTick;
+    BenchJson();
+    Writeln('total + cleanup: ', GetTick - k);
+
+
+    Writeln('--- MsgPack ---');
+    k := GetTick;
+    BenchMsgPack();
+    Writeln('total + cleanup: ', GetTick - k);
+
+  except
+    on E: Exception do
+    begin
+      Writeln(E.Message);
+    end;
+  end;
+  readln;
+
+end.
