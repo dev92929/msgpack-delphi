@@ -5,7 +5,7 @@ program bench;
 uses
   Windows,
   SysUtils,
-  superobject,
+  superobject, (* https://github.com/pult/SuperObject.Delphi/blob/master/Lib/superobject.pas *)
   msgpack in '..\msgpack.pas';
 
 function GetTick: LongWord;
@@ -48,7 +48,7 @@ begin
   ts.O['array'] := TSuperObject.Create(stArray);
   a := ts.O['array'].AsArray;
   for i := 1 to 1000000 do
-    a.Add(i);
+    a.Add(TSuperObject.Create(SuperInt(i)));
 
   k := GetTick - k;
   Writeln('insert array: ', k);
