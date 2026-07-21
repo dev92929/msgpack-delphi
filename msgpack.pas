@@ -273,6 +273,8 @@ var
   DeletedBucketValue: IMsgPackObject;
 
 {$IFNDEF STRINGMAPKEYS}
+{$IFOPT R+}{$DEFINE MP_RESTORE_R}{$R-}{$ENDIF}
+{$IFOPT Q+}{$DEFINE MP_RESTORE_Q}{$Q-}{$ENDIF}
 function HashBytes(const Key: RawByteString): Cardinal;
 var
   i: Integer;
@@ -282,8 +284,12 @@ begin
   for i := 1 to Length(Key) do
     Result := (Result xor Ord(Key[i])) * 16777619;
 end;
+{$IFDEF MP_RESTORE_R}{$R+}{$UNDEF MP_RESTORE_R}{$ENDIF}
+{$IFDEF MP_RESTORE_Q}{$Q+}{$UNDEF MP_RESTORE_Q}{$ENDIF}
 {$ENDIF}
 
+{$IFOPT R+}{$DEFINE MP_RESTORE_R}{$R-}{$ENDIF}
+{$IFOPT Q+}{$DEFINE MP_RESTORE_Q}{$Q-}{$ENDIF}
 function HashString(const Key: UnicodeString): Cardinal;
 var
   i: Integer;
@@ -293,6 +299,8 @@ begin
   for i := 1 to Length(Key) do
     Result := (Result xor Ord(Key[i])) * 16777619;
 end;
+{$IFDEF MP_RESTORE_R}{$R+}{$UNDEF MP_RESTORE_R}{$ENDIF}
+{$IFDEF MP_RESTORE_Q}{$Q+}{$UNDEF MP_RESTORE_Q}{$ENDIF}
 
 procedure TMsgPackMap.InternalPut(const Key: TMsgPackMapKey; const Value: IMsgPackObject);
 var
@@ -491,12 +499,12 @@ end;
 
 function TMsgPackArray.Get(const Index: Integer): IMsgPackObject;
 begin
-  Result := IMsgPackObject(FItems[Index]);
+  Result := FItems[Index] as IMsgPackObject;
 end;
 
 procedure TMsgPackArray.Put(const Index: Integer; const Value: IMsgPackObject);
 begin
-  FItems.Insert(Index, Value);
+  FItems[Index] := Value;
 end;
 
 { TMsgPackObject }
@@ -878,7 +886,7 @@ begin
         end
         else if (FVariant.dataInteger >= -32) and (FVariant.dataInteger <= -1) then
         begin
-          WriteByte($11100000 or Byte(FVariant.dataInteger)); // neg fixnum
+          WriteByte($E0 or Byte(FVariant.dataInteger)); // neg fixnum
         end
         else if (FVariant.dataInteger >= 127 + 1) and (FVariant.dataInteger <= High(Byte)) then
         begin
@@ -898,17 +906,17 @@ begin
         else if (FVariant.dataInteger >= Low(ShortInt)) and (FVariant.dataInteger <= -32 - 1) then
         begin
           WriteByte($D0); // int8
-          WriteByte(ShortInt(FVariant.dataInteger));
+          WriteByte(Byte(FVariant.dataInteger));
         end
         else if (FVariant.dataInteger >= Low(SmallInt)) and (FVariant.dataInteger <= Low(ShortInt) - 1) then
         begin
           WriteByte($D1); // int16
-          WriteBEWord(SmallInt(FVariant.dataInteger));
+          WriteBEWord(Word(FVariant.dataInteger));
         end
         else if (FVariant.dataInteger >= Low(Integer)) and (FVariant.dataInteger <= Low(SmallInt) - 1) then
         begin
           WriteByte($D2); // int32
-          WriteBEDWord(Integer(FVariant.dataInteger));
+          WriteBEDWord(Cardinal(FVariant.dataInteger));
         end
         else
         begin
@@ -1346,4 +1354,3 @@ initialization
   DeletedBucketValue := TMsgPackObject.Create;
 
 end.
-
