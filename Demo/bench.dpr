@@ -26,7 +26,7 @@ var
   s: SOString;
   json : UTF8String;
   ts: TSuperTableString;
-  a: TSuperArray;
+  a: ISuperArray;
 begin
   Randomize;
   js := TSuperObject.Create;
