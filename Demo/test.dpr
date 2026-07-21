@@ -6,7 +6,7 @@ program test;
 
 {$ASSERTIONS ON}
 
-{$IFDEF WINDOWS}
+{$IFDEF MSWINDOWS}
   {$APPTYPE CONSOLE}
 {$ENDIF}
 
